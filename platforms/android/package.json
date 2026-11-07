@@ -1,0 +1,29 @@
+{
+  "name": "orange-player-android",
+  "version": "1.0.0",
+  "description": "ORANGE Player Android (TV + Mobile) — Capacitor wrapper",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Run the Next.js dev server in the project root: bun run dev'",
+    "build:web": "cd ../.. && next build",
+    "sync": "npx cap sync android",
+    "copy": "npx cap copy android",
+    "open": "npx cap open android",
+    "add:android": "npx cap add android",
+    "build:apk": "cd android && ./gradlew assembleRelease",
+    "build:apk:debug": "cd android && ./gradlew assembleDebug",
+    "build:bundle": "cd android && ./gradlew bundleRelease",
+    "clean": "cd android && ./gradlew clean"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/splash-screen": "^6.0.2",
+    "@capacitor/http": "^6.0.1",
+    "@capacitor/status-bar": "^6.0.1",
+    "@capacitor/app": "^6.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

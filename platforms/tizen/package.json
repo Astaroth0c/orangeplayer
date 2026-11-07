@@ -1,0 +1,11 @@
+{
+  "name": "orange-player-tizen",
+  "version": "1.0.0",
+  "description": "ORANGE Player — Samsung Smart TV (Tizen)",
+  "scripts": {
+    "build": "echo 'Build with Tizen Studio'",
+    "package": "tizen package -t wgt -s orange-player -- src/",
+    "install:tv": "sdb install orange-player.wgt",
+    "run:tv": "sdb shell 0 debug orange-player"
+  }
+}

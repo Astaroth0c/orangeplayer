@@ -1,0 +1,16 @@
+{
+  "name": "orange-player-linux",
+  "version": "1.0.0",
+  "description": "ORANGE Player Linux desktop — Tauri wrapper",
+  "private": true,
+  "scripts": {
+    "dev": "cargo tauri dev",
+    "build": "cargo tauri build",
+    "build:debug": "cargo tauri build --debug",
+    "icon": "cargo tauri icon ../../../../public/logo.svg",
+    "info": "cargo tauri info"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

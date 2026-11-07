@@ -13,8 +13,8 @@ import {
   AlertCircle,
   Radio,
   FileText,
-  Sparkles,
   Plug,
+  Zap,
 } from "lucide-react";
 import { useAppStore } from "@/stores/app-store";
 import { useGridNavigation } from "@/hooks/use-spatial-nav";
@@ -78,24 +78,11 @@ export function ProvidersView() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["providers"] });
+      queryClient.invalidateQueries({ queryKey: ["catalog"] });
       toast(`Sincronização concluída. ${data.itemCount} itens.`);
     },
     onError: (e) =>
       toast(e instanceof Error ? e.message : "Erro ao sincronizar."),
-  });
-
-  const resyncDemo = useMutation({
-    mutationFn: async () => {
-      const r = await fetch("/api/seed", { method: "POST" });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "Falha ao resemear.");
-      return j;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["providers"] });
-      toast("Catálogo de demonstração sincronizado.");
-    },
-    onError: (e) => toast(e instanceof Error ? e.message : "Erro ao sincronizar demo."),
   });
 
   const deleteProvider = useMutation({
@@ -134,9 +121,7 @@ export function ProvidersView() {
       queryClient.invalidateQueries({ queryKey: ["providers"] });
       toast(`Fonte “${provider.name}” adicionada. Sincronizando...`);
       // Auto-sync after creation
-      if (provider.type !== "demo") {
-        syncProvider.mutate(provider.id);
-      }
+      syncProvider.mutate(provider.id);
     },
     onError: (e) => toast(e instanceof Error ? e.message : "Erro ao adicionar fonte."),
   });
@@ -164,7 +149,7 @@ export function ProvidersView() {
               Fontes
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Gerencie seus provedores de IPTV (Xtream, M3U e Demo).
+              Gerencie seus provedores de IPTV (Xtream Codes e listas M3U).
             </p>
           </div>
         </div>
@@ -189,7 +174,7 @@ export function ProvidersView() {
         <EmptyState
           icon={<Server className="w-12 h-12" />}
           title="Nenhuma fonte configurada"
-          subtitle="Adicione um provedor Xtream, M3U ou use o catálogo de demonstração."
+          subtitle="Adicione um provedor Xtream Codes ou uma lista M3U para começar."
         />
       ) : (
         <div ref={gridRef} className="space-y-3 pb-12">
@@ -200,9 +185,7 @@ export function ProvidersView() {
               syncing={
                 syncProvider.isPending && syncProvider.variables === p.id
               }
-              resyncingDemo={resyncDemo.isPending}
               onSync={() => syncProvider.mutate(p.id)}
-              onResyncDemo={() => resyncDemo.mutate()}
               onDelete={() => deleteProvider.mutate(p.id)}
               deleting={deleteProvider.isPending}
             />
@@ -227,24 +210,19 @@ export function ProvidersView() {
 function ProviderCard({
   provider,
   syncing,
-  resyncingDemo,
   onSync,
-  onResyncDemo,
   onDelete,
   deleting,
 }: {
   provider: ProviderDTO;
   syncing: boolean;
-  resyncingDemo: boolean;
   onSync: () => void;
-  onResyncDemo: () => void;
   onDelete: () => void;
   deleting: boolean;
 }) {
-  const isDemo = provider.type === "demo";
   const isReady = provider.status === "ready";
   const isError = provider.status === "error";
-  const isSyncing = provider.status === "syncing" || syncing || (isDemo && resyncingDemo);
+  const isSyncing = provider.status === "syncing" || syncing;
 
   return (
     <motion.div
@@ -260,14 +238,10 @@ function ProviderCard({
         <div
           className={cn(
             "w-12 h-12 rounded-xl grid place-items-center shrink-0",
-            isDemo
-              ? "bg-gradient-to-br from-brand/30 to-brand/10 text-brand border border-brand/30"
-              : "glass text-brand border border-white/10",
+            "glass text-brand border border-white/10",
           )}
         >
-          {isDemo ? (
-            <Sparkles className="w-5 h-5" />
-          ) : provider.type === "xtream" ? (
+          {provider.type === "xtream" ? (
             <Plug className="w-5 h-5" />
           ) : (
             <FileText className="w-5 h-5" />
@@ -297,9 +271,6 @@ function ProviderCard({
                 Última sync: {relativeTime(provider.lastSyncAt)}
               </span>
             )}
-            {isDemo && (
-              <span className="text-brand/80">Catálogo de demonstração</span>
-            )}
             {isError && provider.lastError && (
               <span
                 className="inline-flex items-center gap-1 text-destructive truncate max-w-xs"
@@ -315,79 +286,59 @@ function ProviderCard({
 
       {/* Right: actions */}
       <div className="flex items-center gap-2 shrink-0">
-        {isDemo ? (
           <Button
             size="sm"
             variant="ghost"
-            onClick={onResyncDemo}
-            disabled={resyncingDemo}
+            onClick={onSync}
+            disabled={syncing}
             data-focusable
             className="glass border border-white/10 hover:border-brand/40"
           >
-            {resyncingDemo ? (
+            {syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <RefreshCw className="w-3.5 h-3.5" />
             )}
-            Resincronizar
+            Sincronizar agora
           </Button>
-        ) : (
-          <>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onSync}
-              disabled={syncing}
-              data-focusable
-              className="glass border border-white/10 hover:border-brand/40"
-            >
-              {syncing ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="w-3.5 h-3.5" />
-              )}
-              Sincronizar agora
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={deleting}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={deleting}
+                data-focusable
+                className="glass border border-white/10 text-muted-foreground hover:text-destructive hover:border-destructive/40"
+              >
+                {deleting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="glass-strong border-white/10">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir fonte?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  A fonte <strong>{provider.name}</strong> será removida e
+                  todo o catálogo associado (filmes, séries, canais) será
+                  apagado. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel data-focusable>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
                   data-focusable
-                  className="glass border border-white/10 text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                  onClick={onDelete}
+                  className="bg-destructive text-white hover:bg-destructive/90"
                 >
-                  {deleting ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
                   Excluir
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="glass-strong border-white/10">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Excluir fonte?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    A fonte <strong>{provider.name}</strong> será removida e
-                    todo o catálogo associado (filmes, séries, canais) será
-                    apagado. Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel data-focusable>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    data-focusable
-                    onClick={onDelete}
-                    className="bg-destructive text-white hover:bg-destructive/90"
-                  >
-                    Excluir
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
       </div>
     </motion.div>
   );

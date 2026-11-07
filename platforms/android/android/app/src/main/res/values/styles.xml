@@ -1,0 +1,21 @@
+<resources>
+    <!-- Main app theme: dark, no action bar, fullscreen-friendly. -->
+    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/graphite_bg</item>
+        <item name="android:statusBarColor">@color/graphite_bg</item>
+        <item name="android:navigationBarColor">@color/graphite_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:colorBackground">@color/graphite_bg</item>
+        <item name="android:textColorPrimary">@color/text_light</item>
+    </style>
+
+    <!-- Splash theme used by the Capacitor SplashScreen plugin while the
+         WebView is loading. Matches the app's graphite background so the
+         transition from splash → app is invisible. -->
+    <style name="SplashTheme" parent="AppTheme">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/graphite_bg</item>
+    </style>
+</resources>

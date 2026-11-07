@@ -1,0 +1,26 @@
+[package]
+name = "orange-player"
+version = "1.0.0"
+description = "ORANGE Player — Multiplatform Entertainment System"
+authors = ["ORANGE Player"]
+edition = "2021"
+rust-version = "1.75"
+
+[lib]
+name = "orange_player_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-shell = "2"
+tauri-plugin-http = "2"
+tauri-plugin-window-state = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

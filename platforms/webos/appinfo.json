@@ -1,0 +1,25 @@
+{
+  "id": "com.orangeplayer.app",
+  "version": "1.0.0",
+  "vendor": "ORANGE Player",
+  "type": "web",
+  "main": "index.html",
+  "title": "ORANGE Player",
+  "description": "Multiplatform Entertainment System",
+  "icon": "icon.png",
+  "largeIcon": "icon-large.png",
+  "bgImage": "splash.png",
+  "splashBackground": "splash.png",
+  "defaultWindowType": "fullscreen",
+  "supports4K": true,
+  "handles4KResolution": true,
+  "allowMediaContentAudio": true,
+  "allowMediaContentVideo": true,
+  "requiredPermissions": [
+    "time",
+    "settings",
+    "externaloutput",
+    "media.accessibility"
+  ],
+  "checkUpdateOnLaunch": true
+}

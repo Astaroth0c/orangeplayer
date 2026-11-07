@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Loader2,
   Plus,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { OrangeButton } from "@/components/orange/orange-button";
@@ -66,6 +67,14 @@ const emptyForm: FormState = {
   username: "",
   password: "",
   m3uUrl: "",
+};
+
+// Login Xtream de teste (temporarily available — usuário pode usar para validar o app)
+const TEST_LOGIN = {
+  name: "ORANGE Test",
+  serverUrl: "http://us8.lat",
+  username: "44720622",
+  password: "75238219",
 };
 
 const fadeUp = {
@@ -155,52 +164,23 @@ export function OnboardingView() {
 
   // ----- Handlers -----
 
+  // Prefill Xtream form with the test login and jump to the xtream-form step
+  function startTestLogin() {
+    setErrors({});
+    setTestResult({ status: "idle" });
+    setForm({
+      name: TEST_LOGIN.name,
+      serverUrl: TEST_LOGIN.serverUrl,
+      username: TEST_LOGIN.username,
+      password: TEST_LOGIN.password,
+      m3uUrl: "",
+    });
+    setStep("xtream-form");
+  }
+
   function startDemo() {
-    setPendingType("demo");
-    setSaving(true);
-    (async () => {
-      try {
-        // 1. Ensure demo provider exists
-        let demoProvider = providers.find((p) => p.type === "demo") || null;
-        if (!demoProvider) {
-          const res = await fetch("/api/providers", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: "ORANGE Demo", type: "demo" } satisfies CreateProviderInput),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || "Não foi possível criar a fonte demo.");
-          demoProvider = data.provider as ProviderDTO;
-          setProviders([...providers, demoProvider]);
-        }
-
-        // 2. Check profiles
-        const profilesRes = await fetch("/api/profiles").then((r) => r.json());
-        const profiles: ProfileDTO[] = profilesRes.profiles ?? [];
-        if (profiles.length > 0) {
-          setProfile(profiles[0]);
-          toast.success("Bem-vindo ao ORANGE Player!");
-          pushView("home");
-          return;
-        }
-
-        // 3. Create default profile
-        const created = await fetch("/api/profiles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Perfil Principal", isDefault: true }),
-        }).then((r) => r.json());
-        if (!created.profile) throw new Error(created.error || "Erro ao criar perfil.");
-        setProfile(created.profile);
-        toast.success("Catálogo demo pronto!");
-        pushView("home");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao iniciar demo.");
-      } finally {
-        setSaving(false);
-        setPendingType(null);
-      }
-    })();
+    // Kept for compatibility — but now starts the test login flow instead.
+    startTestLogin();
   }
 
   function validateXtream(): FormErrors {
@@ -423,18 +403,18 @@ export function OnboardingView() {
                   Escolha sua <span className="text-brand-gradient">fonte</span>
                 </h2>
                 <p className="mt-3 text-muted-foreground">
-                  Comece com o catálogo demo ou conecte seu provedor IPTV.
+                  Comece com o login de teste pré-configurado ou conecte seu próprio provedor IPTV.
                 </p>
               </header>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <ProviderCard
-                  icon={<Sparkles className="w-7 h-7" />}
-                  title="Catálogo Demo"
-                  description="Experimente o ORANGE Player com um catálogo local. Sem login, sem configuração."
-                  badge="Recomendado"
+                  icon={<KeyRound className="w-7 h-7" />}
+                  title="Login de Teste"
+                  description="Use o login Xtream de demonstração pré-configurado (us8.lat) para validar o app agora mesmo."
+                  badge="Mais rápido"
                   loading={pendingType === "demo" && saving}
-                  onClick={startDemo}
+                  onClick={startTestLogin}
                 />
                 <ProviderCard
                   icon={<Server className="w-7 h-7" />}

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ORANGE Player — AndroidManifest.xml
+  Supports BOTH mobile (phones/tablets) and Android TV (Leanback launcher).
+
+  - INTERNET / ACCESS_NETWORK_STATE: required for IPTV streaming.
+  - WAKE_LOCK: keep the screen on during video playback.
+  - VIBRATE: haptic feedback on D-pad / focus moves (optional).
+  - leanback feature required=false: optional on phones, available on TV.
+  - touchscreen feature required=false: lets the APK install on TV-only boxes.
+  - LEANBACK_LAUNCHER + LAUNCHER: the app shows in BOTH the phone launcher and
+    the Android TV home screen.
+  - usesCleartextTraffic=true + CapacitorHttp: many IPTV streams are http://.
+  - hardwareAccelerated=true: needed for smooth HLS.js video decode.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.orangeplayer.app">
+
+    <!-- Network + playback permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- TV + Mobile support: both features optional so the APK installs everywhere -->
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="ORANGE Player"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="ORANGE Player"
+            android:screenOrientation="fullUser"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- Mobile (phone / tablet) launcher -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Android TV home launcher -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+
+            <!-- Optional: deep-link to a specific catalog item / channel -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="orangeplayer" />
+            </intent-filter>
+        </activity>
+
+        <!-- Capacitor SplashScreen plugin metadata (matches capacitor.config.ts) -->
+        <meta-data
+            android:name="com.orangeplayer.app.SPLASH_SCREEN"
+            android:resource="@style/SplashTheme" />
+    </application>
+</manifest>

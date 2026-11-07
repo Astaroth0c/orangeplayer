@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  network_security_config.xml — ORANGE Player
+  Allows cleartext (http://) traffic so the WebView can play IPTV streams
+  that are served over plain HTTP (very common for live TV / Xtream Codes
+  providers). HTTPS is allowed by default for everything else.
+-->
+<network-security-config>
+    <!-- Default: respect certificate validation (trust user-added CAs too
+         so self-hosted Next.js dev servers with custom CAs work). -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Explicitly allow loopback (embedded local API server, Option B). -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

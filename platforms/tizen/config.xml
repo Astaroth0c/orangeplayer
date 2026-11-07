@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets"
+    id="https://orangeplayer.app/tizen"
+    version="1.0.0"
+    viewmodes="maximized">
+
+    <tizen:application id="com.orangeplayer.app" package="orangeplayer" required_version="2.4"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <feature name="http://tizen.org/feature/network.wifi"/>
+
+    <icon src="icon.png"/>
+    <name>ORANGE Player</name>
+    <description>Multiplatform Entertainment System</description>
+    <author href="https://orangeplayer.app" email="contact@orangeplayer.app">ORANGE Player</author>
+
+    <tizen:metadata key="http://tizen.org/metadata/prefer-mdpi-launcher-icon" value="true"/>
+    <tizen:profile name="tv"/>
+
+    <!-- Privileges -->
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.display"/>
+    <tizen:privilege name="http://tizen.org/privilege/mediacapture"/>
+
+    <!-- Allow mixed content (HTTP streams) -->
+    <tizen:content-security-policy>
+        default-src 'self';
+        img-src 'self' https: http: data: blob:;
+        media-src 'self' https: http: blob:;
+        connect-src 'self' https: http: ws: wss:;
+        style-src 'self' 'unsafe-inline';
+        script-src 'self' 'unsafe-eval' 'unsafe-inline';
+        font-src 'self' https: http: data:
+    </tizen:content-security-policy>
+
+    <!-- TV features -->
+    <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto"/>
+</widget>

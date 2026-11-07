@@ -53,16 +53,16 @@ export default function Home() {
     return () => window.removeEventListener("orange-toast", handler);
   }, []);
 
-  // Boot: seed demo + carregar perfis/providers
+  // Boot: carregar perfis/providers (sem seed automático de demo)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        // 1. Seed (idempotente)
-        await fetch("/api/seed", { method: "POST" }).then((r) => r.json());
-        // 2. Profiles
-        const profilesRes = await fetch("/api/profiles").then((r) => r.json());
-        const providersRes = await fetch("/api/providers").then((r) => r.json());
+        // Profiles & providers
+        const [profilesRes, providersRes] = await Promise.all([
+          fetch("/api/profiles").then((r) => r.json()),
+          fetch("/api/providers").then((r) => r.json()),
+        ]);
         if (cancelled) return;
 
         useAppStore.getState().setProviders(providersRes.providers || []);
@@ -75,7 +75,7 @@ export default function Home() {
           useAppStore.getState().setView("onboarding");
         }
         // pequeno delay para a splash ter efeito
-        setTimeout(() => !cancelled && setBooted(true), 2400);
+        setTimeout(() => !cancelled && setBooted(true), 2200);
       } catch (err) {
         console.error("boot erro:", err);
         if (!cancelled) {

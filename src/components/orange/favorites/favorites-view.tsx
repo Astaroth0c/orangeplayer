@@ -41,7 +41,8 @@ export function FavoritesView() {
     queryFn: async () => {
       const r = await fetch(`/api/favorites?profileId=${profileId}`);
       const j = await r.json();
-      return (j.favorites as FavoriteDTO[]) || [];
+      const list = j?.favorites;
+      return Array.isArray(list) ? (list as FavoriteDTO[]) : [];
     },
     enabled: !!profileId,
   });
@@ -77,7 +78,7 @@ export function FavoritesView() {
   });
 
   const filtered = useMemo(() => {
-    const list = favQuery.data ?? [];
+    const list = Array.isArray(favQuery.data) ? favQuery.data : [];
     if (filter === "all") return list;
     return list.filter((f) => f.itemType === filter);
   }, [favQuery.data, filter]);

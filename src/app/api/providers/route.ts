@@ -73,12 +73,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: "ID obrigatório." }, { status: 400 });
     const provider = await db.provider.findUnique({ where: { id } });
     if (!provider) return NextResponse.json({ error: "Provedor não encontrado." }, { status: 404 });
-    if (provider.type === "demo") {
-      return NextResponse.json(
-        { error: "O provedor Demo não pode ser removido." },
-        { status: 400 },
-      );
-    }
+    // Cascata: Prisma já cuida via onDelete: Cascade nas relações
     await db.provider.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err) {

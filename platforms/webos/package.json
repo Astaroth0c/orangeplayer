@@ -1,0 +1,11 @@
+{
+  "name": "orange-player-webos",
+  "version": "1.0.0",
+  "description": "ORANGE Player — LG Smart TV (webOS)",
+  "scripts": {
+    "package": "ares-package .",
+    "install": "ares-install --device tv orange-player_1.0.0_all.ipk",
+    "launch": "ares-launch --device tv com.orangeplayer.app",
+    "dev": "ares-inspect --device tv com.orangeplayer.app"
+  }
+}
