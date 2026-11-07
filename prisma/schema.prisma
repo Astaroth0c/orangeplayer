@@ -1,0 +1,324 @@
+// ORANGE Player — Prisma schema (SQLite)
+// Banco local: perfis, fontes, catálogo, histórico, favoritos, configurações.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================
+// PERFIS & PREFERÊNCIAS
+// ===========================================================
+
+model Profile {
+  id        String   @id @default(cuid())
+  name      String
+  avatar    String?
+  pin       String?
+  isKid     Boolean  @default(false)
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites         Favorite[]
+  history           WatchHistory[]
+  progress          PlaybackProgress[]
+  searchHistory     SearchHistory[]
+  settings          AppSettings?
+}
+
+model AppSettings {
+  id              String   @id @default(cuid())
+  profileId       String   @unique
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // Aparência
+  theme           String   @default("dark")
+  uiDensity       String   @default("comfortable") // comfortable | compact | expanded
+  posterSize      String   @default("md") // sm | md | lg
+  reduceMotion    Boolean  @default(false)
+
+  // Reprodução
+  autoplayNext    Boolean  @default(true)
+  skipIntro       Boolean  @default(true)
+  defaultSpeed    Float    @default(1.0)
+  hwAccel         Boolean  @default(true)
+  bufferProfile   String   @default("auto") // low | auto | high
+
+  // Legendas
+  subtitleEnabled Boolean @default(true)
+  subtitleLang    String  @default("por")
+  subtitleSize    String  @default("md")
+  subtitleColor   String  @default("#FFFFFF")
+  subtitleBg      Boolean @default(true)
+
+  // Áudio
+  audioLang       String  @default("por")
+
+  // Privacidade / Controle parental
+  parentalControl Boolean @default(false)
+  maxRating       String  @default("18")
+
+  // Sync
+  syncEnabled     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===========================================================
+// FONTES (PROVEDORES)
+// ===========================================================
+
+model Provider {
+  id          String   @id @default(cuid())
+  profileId   String?
+  name        String
+  type        String   // xtream | m3u | demo
+  serverUrl   String
+  username    String?
+  password    String?
+  // Para M3U direta
+  m3uUrl      String?
+  // Estado
+  status      String   @default("idle") // idle | syncing | ready | error
+  lastSyncAt  DateTime?
+  lastError   String?
+  itemCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categories  Category[]
+  channels    Channel[]
+  movies      Movie[]
+  series      Series[]
+}
+
+// ===========================================================
+// CATÁLOGO
+// ===========================================================
+
+model Category {
+  id          String   @id @default(cuid())
+  providerId  String
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  categoryId  String   // ID da categoria no provedor
+  name        String
+  type        String   // movie | series | live
+  parentId    String?
+
+  channels    Channel[]
+  movies      Movie[]
+  series      Series[]
+
+  @@unique([providerId, categoryId, type])
+  @@index([providerId, type])
+}
+
+model Channel {
+  id            String   @id @default(cuid())
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  channelId     String   // ID no provedor
+  name          String
+  logo          String?
+  streamUrl     String
+  epgId         String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  categoryId    String?
+  num           Int?
+  tvgId         String?
+
+  favorites     Favorite[]
+  history       WatchHistory[]
+  progress      PlaybackProgress[]
+  epgEntries    EpgEntry[]
+
+  @@index([providerId])
+  @@index([categoryId])
+}
+
+model Movie {
+  id            String   @id @default(cuid())
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  streamId      String
+  name          String
+  title         String
+  year          Int?
+  rating        Float?
+  poster        String?
+  backdrop      String?
+  plot          String?
+  genre         String?
+  cast          String?
+  director      String?
+  duration      Int?    // segundos
+  container     String?
+  streamUrl     String
+  category      Category? @relation(fields: [categoryId], references: [id])
+  categoryId    String?
+  addedAt       DateTime @default(now())
+
+  favorites     Favorite[]
+  history       WatchHistory[]
+  progress      PlaybackProgress[]
+
+  @@index([providerId])
+  @@index([categoryId])
+  @@index([name])
+}
+
+model Series {
+  id            String   @id @default(cuid())
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  seriesId      String
+  name          String
+  title         String
+  year          Int?
+  rating        Float?
+  poster        String?
+  backdrop      String?
+  plot          String?
+  genre         String?
+  cast          String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  categoryId    String?
+  addedAt       DateTime @default(now())
+
+  seasons       Season[]
+  favorites     Favorite[]
+  history       WatchHistory[]
+
+  @@index([providerId])
+  @@index([categoryId])
+  @@index([name])
+}
+
+model Season {
+  id            String   @id @default(cuid())
+  seriesId      String
+  series        Series   @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  seasonNumber  Int
+  name          String?
+  poster        String?
+  overview      String?
+
+  episodes      Episode[]
+
+  @@unique([seriesId, seasonNumber])
+}
+
+model Episode {
+  id            String   @id @default(cuid())
+  seasonId      String
+  season        Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  episodeNum    Int
+  title         String
+  overview      String?
+  duration      Int?     // segundos
+  streamUrl     String
+  poster        String?
+  airDate       String?
+
+  progress      PlaybackProgress[]
+  history       WatchHistory[]
+
+  @@unique([seasonId, episodeNum])
+}
+
+// ===========================================================
+// EPG (GUIA DE PROGRAMAÇÃO)
+// ===========================================================
+
+model EpgEntry {
+  id            String   @id @default(cuid())
+  channelId     String
+  channel       Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  start         DateTime
+  end           DateTime
+  category      String?
+
+  @@index([channelId, start])
+}
+
+// ===========================================================
+// EXPERIÊNCIA DO USUÁRIO
+// ===========================================================
+
+model Favorite {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  itemType    String   // movie | series | channel | episode
+  itemId      String
+  movie       Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  movieId     String?
+  series      Series?  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  seriesId    String?
+  channel     Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId   String?
+  createdAt    DateTime @default(now())
+
+  @@unique([profileId, itemType, itemId])
+}
+
+model WatchHistory {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  itemType    String   // movie | episode | channel
+  itemId      String
+  title       String
+  poster      String?
+  backdrop    String?
+  movie       Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  movieId     String?
+  series      Series?  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  seriesId    String?
+  channel     Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId   String?
+  episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  episodeId   String?
+  watchedAt   DateTime @default(now())
+  duration    Int      @default(0)
+
+  @@index([profileId, watchedAt])
+}
+
+model PlaybackProgress {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  itemType    String   // movie | episode | channel
+  itemId      String
+  position    Int      @default(0) // segundos
+  duration    Int      @default(0) // segundos
+  completed   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  movie       Movie?   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  movieId     String?
+  channel     Channel? @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId   String?
+  episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  episodeId   String?
+
+  @@unique([profileId, itemType, itemId])
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  query       String
+  createdAt   DateTime @default(now())
+
+  @@index([profileId, createdAt])
+}
