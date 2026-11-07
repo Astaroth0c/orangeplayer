@@ -25,7 +25,7 @@ jobs:
           bun-version: latest
 
       - name: Install Bun dependencies
-        run: bun install --frozen-lockfile=false
+        run: bun install
 
       - name: Setup database
         run: bun run db:generate
@@ -168,7 +168,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Bun dependencies
-        run: bun install --frozen-lockfile=false
+        run: bun install 
 
       - name: Download web static export
         uses: actions/download-artifact@v4
@@ -222,7 +222,7 @@ jobs:
             libxdo-dev
 
       - name: Install Bun dependencies
-        run: bun install --frozen-lockfile=false
+        run: bun install 
 
       - name: Download web static export
         uses: actions/download-artifact@v4
@@ -259,7 +259,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install Bun dependencies
-        run: bun install --frozen-lockfile=false
+        run: bun install 
 
       - name: Download web static export
         uses: actions/download-artifact@v4
