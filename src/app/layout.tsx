@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { PWARegister } from "@/components/providers/pwa-register";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,9 +27,21 @@ export const metadata: Metadata = {
     "M3U",
   ],
   authors: [{ name: "ORANGE Player" }],
+  manifest: "/manifest.json",
   icons: {
-    icon: "/logo.svg",
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192x192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512x512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    title: "ORANGE Player",
+    statusBarStyle: "black-translucent",
+  },
+  applicationName: "ORANGE Player",
   openGraph: {
     title: "ORANGE Player",
     description: "Entre no seu universo. Filmes, séries, canais e entretenimento.",
@@ -37,7 +50,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#101419",
+  themeColor: "#FF781F",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -57,6 +70,7 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             {children}
+            <PWARegister />
             <Toaster />
             <SonnerToaster position="top-center" theme="dark" />
           </QueryProvider>

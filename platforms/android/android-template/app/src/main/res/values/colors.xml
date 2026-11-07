@@ -1,0 +1,10 @@
+<resources>
+    <!-- ORANGE Player brand palette — must mirror src/app/globals.css -->
+    <color name="orange_brand">#FF781F</color>
+    <color name="graphite_bg">#101419</color>
+    <color name="surface">#1B222A</color>
+    <color name="surface_alt">#222B33</color>
+    <color name="text_light">#F4F6F8</color>
+    <color name="text_muted">#9AA7B4</color>
+    <color name="accent_amber">#F5B945</color>
+</resources>

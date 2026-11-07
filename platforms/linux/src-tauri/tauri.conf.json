@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "identifier": "com.orangeplayer.app",
   "build": {
-    "frontendDist": "../../out",
-    "beforeDevCommand": "cd ../.. && bun run dev",
-    "beforeBuildCommand": "cd ../.. && bun run build:static",
+    "frontendDist": "/home/z/my-project/out",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
     "devUrl": "http://localhost:3000"
   },
   "app": {
@@ -29,11 +29,19 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["appimage", "deb"],
-    "icon": ["icons/icon.png"],
+    "targets": [
+      "appimage",
+      "deb"
+    ],
+    "icon": [
+      "icons/icon.png"
+    ],
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
       }
     }
   }

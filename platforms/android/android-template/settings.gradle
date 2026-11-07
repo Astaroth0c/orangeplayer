@@ -1,0 +1,18 @@
+// settings.gradle for the ORANGE Player Android wrapper.
+//
+// `include ':app'` is the main application module. The Capacitor runtime is
+// pulled in as a normal Maven dependency in app/build.gradle (com.getcapacitor:
+// capacitor-android), so we don't strictly need to include ':capacitor-android'
+// as a source project — but keeping the line commented lets you switch to a
+// local source build if you ever need to patch Capacitor itself.
+
+include ':app'
+
+// Optional: include Capacitor from source (uncomment if needed):
+// include ':capacitor-android'
+// project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
+
+// Capacitor plugins installed via `npx cap add` are auto-included here by the
+// CLI. If you add the plugins from package.json (splash-screen, http,
+// status-bar, app), the corresponding lines will appear automatically after
+// `npx cap sync android`.
