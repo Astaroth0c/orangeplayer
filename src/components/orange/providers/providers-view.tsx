@@ -84,20 +84,6 @@ export function ProvidersView() {
       toast(e instanceof Error ? e.message : "Erro ao sincronizar."),
   });
 
-  const resyncDemo = useMutation({
-    mutationFn: async () => {
-      const r = await fetch("/api/seed", { method: "POST" });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "Falha ao resemear.");
-      return j;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["providers"] });
-      toast("Catálogo de demonstração sincronizado.");
-    },
-    onError: (e) => toast(e instanceof Error ? e.message : "Erro ao sincronizar demo."),
-  });
-
   const deleteProvider = useMutation({
     mutationFn: async (id: string) => {
       const r = await fetch(`/api/providers?id=${id}`, { method: "DELETE" });
@@ -134,9 +120,7 @@ export function ProvidersView() {
       queryClient.invalidateQueries({ queryKey: ["providers"] });
       toast(`Fonte “${provider.name}” adicionada. Sincronizando...`);
       // Auto-sync after creation
-      if (provider.type !== "demo") {
-        syncProvider.mutate(provider.id);
-      }
+      syncProvider.mutate(provider.id);
     },
     onError: (e) => toast(e instanceof Error ? e.message : "Erro ao adicionar fonte."),
   });
@@ -164,7 +148,7 @@ export function ProvidersView() {
               Fontes
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Gerencie seus provedores de IPTV (Xtream, M3U e Demo).
+              Gerencie seus provedores de IPTV (Xtream Codes e listas M3U).
             </p>
           </div>
         </div>
@@ -189,7 +173,7 @@ export function ProvidersView() {
         <EmptyState
           icon={<Server className="w-12 h-12" />}
           title="Nenhuma fonte configurada"
-          subtitle="Adicione um provedor Xtream, M3U ou use o catálogo de demonstração."
+          subtitle="Adicione um provedor Xtream Codes ou uma lista M3U para começar."
         />
       ) : (
         <div ref={gridRef} className="space-y-3 pb-12">
@@ -200,9 +184,7 @@ export function ProvidersView() {
               syncing={
                 syncProvider.isPending && syncProvider.variables === p.id
               }
-              resyncingDemo={resyncDemo.isPending}
               onSync={() => syncProvider.mutate(p.id)}
-              onResyncDemo={() => resyncDemo.mutate()}
               onDelete={() => deleteProvider.mutate(p.id)}
               deleting={deleteProvider.isPending}
             />

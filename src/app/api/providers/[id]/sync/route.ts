@@ -21,8 +21,6 @@ export async function POST(
       count = await syncM3U(provider);
     } else if (provider.type === "xtream" && provider.username && provider.password) {
       count = await syncXtream(provider);
-    } else if (provider.type === "demo") {
-      count = await db.provider.findUnique({ where: { id } }).then((p) => p?.itemCount ?? 0);
     } else {
       return NextResponse.json(
         { error: "Configuração incompleta para sincronização." },

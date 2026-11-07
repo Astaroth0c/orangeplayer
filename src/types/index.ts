@@ -2,7 +2,7 @@
 // ORANGE Player — Tipos compartilhados
 // ===========================================================
 
-export type ProviderType = "xtream" | "m3u" | "demo";
+export type ProviderType = "xtream" | "m3u";
 
 export type ItemType = "movie" | "series" | "channel" | "episode";
 

@@ -131,9 +131,7 @@ export function Sidebar() {
             </div>
             <div className="text-[11px] text-muted-foreground truncate">
               {activeProvider
-                ? activeProvider.type === "demo"
-                  ? "Demo · Catálogo local"
-                  : `${activeProvider.type.toUpperCase()} · ${activeProvider.itemCount} itens`
+                ? `${activeProvider.type.toUpperCase()} · ${activeProvider.itemCount} itens`
                 : "Sem fonte ativa"}
             </div>
           </div>

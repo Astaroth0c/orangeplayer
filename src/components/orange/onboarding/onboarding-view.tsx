@@ -155,54 +155,6 @@ export function OnboardingView() {
 
   // ----- Handlers -----
 
-  function startDemo() {
-    setPendingType("demo");
-    setSaving(true);
-    (async () => {
-      try {
-        // 1. Ensure demo provider exists
-        let demoProvider = providers.find((p) => p.type === "demo") || null;
-        if (!demoProvider) {
-          const res = await fetch("/api/providers", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: "ORANGE Demo", type: "demo" } satisfies CreateProviderInput),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || "Não foi possível criar a fonte demo.");
-          demoProvider = data.provider as ProviderDTO;
-          setProviders([...providers, demoProvider]);
-        }
-
-        // 2. Check profiles
-        const profilesRes = await fetch("/api/profiles").then((r) => r.json());
-        const profiles: ProfileDTO[] = profilesRes.profiles ?? [];
-        if (profiles.length > 0) {
-          setProfile(profiles[0]);
-          toast.success("Bem-vindo ao ORANGE Player!");
-          pushView("home");
-          return;
-        }
-
-        // 3. Create default profile
-        const created = await fetch("/api/profiles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Perfil Principal", isDefault: true }),
-        }).then((r) => r.json());
-        if (!created.profile) throw new Error(created.error || "Erro ao criar perfil.");
-        setProfile(created.profile);
-        toast.success("Catálogo demo pronto!");
-        pushView("home");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Erro ao iniciar demo.");
-      } finally {
-        setSaving(false);
-        setPendingType(null);
-      }
-    })();
-  }
-
   function validateXtream(): FormErrors {
     const e: FormErrors = {};
     if (!form.name.trim()) e.name = "Informe um nome amigável.";
@@ -423,23 +375,16 @@ export function OnboardingView() {
                   Escolha sua <span className="text-brand-gradient">fonte</span>
                 </h2>
                 <p className="mt-3 text-muted-foreground">
-                  Comece com o catálogo demo ou conecte seu provedor IPTV.
+                  Conecte seu provedor IPTV para começar a assistir.
                 </p>
               </header>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <ProviderCard
-                  icon={<Sparkles className="w-7 h-7" />}
-                  title="Catálogo Demo"
-                  description="Experimente o ORANGE Player com um catálogo local. Sem login, sem configuração."
-                  badge="Recomendado"
-                  loading={pendingType === "demo" && saving}
-                  onClick={startDemo}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
                 <ProviderCard
                   icon={<Server className="w-7 h-7" />}
                   title="Xtream Codes"
                   description="Conecte sua conta Xtream Codes com URL do servidor, usuário e senha."
+                  badge="Recomendado"
                   onClick={() => {
                     setErrors({});
                     setTestResult({ status: "idle" });

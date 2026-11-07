@@ -1,9 +1,9 @@
 // ===========================================================
-// Imagens — utilitários e fallbacks para o catálogo demo
+// Imagens — utilitários e fallbacks para posters (fallback)
 // ===========================================================
 
 /**
- * Gera uma URL determinística de poster para o catálogo demo.
+ * Gera uma URL determinística de poster para posters (fallback).
  * Usa picsum.photos com seed para imagens consistentes.
  */
 export function posterUrl(seed: string, w = 400, h = 600): string {
