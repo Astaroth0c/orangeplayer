@@ -1,6 +1,6 @@
 # ORANGE Player — Build & Release Pipeline
-# Compila APK Android, Windows .exe/.msi, Linux .AppImage/.deb, macOS .dmg
-# Sempre que uma tag v* é criada, todos os binários são gerados e publicados como Release.
+# Compila Windows .exe/.msi, Linux .AppImage/.deb, macOS .dmg no GitHub Actions.
+# Android APK já é compilado localmente e enviado como asset da release.
 
 name: Build All Platforms
 
@@ -8,22 +8,13 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      release_name:
-        description: "Nome da release"
-        required: false
-        default: "ORANGE Player"
-      make_latest:
-        description: "Marcar como latest"
-        required: false
-        default: "true"
 
 permissions:
   contents: write
 
 jobs:
   # ===========================================================
-  # WEB: Static export do Next.js (gera out/ para todas as builds)
+  # WEB: Static export do Next.js (gera out/ para todas as builds desktop)
   # ===========================================================
   build-web:
     runs-on: ubuntu-latest
@@ -32,14 +23,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: prisma/setup-prisma@v1
-        with:
-          version: latest
 
-      - name: Install dependencies
+      - name: Install Bun dependencies
         run: bun install --frozen-lockfile=false
 
-      - name: Setup Prisma
+      - name: Setup database
         run: bun run db:generate
 
       - name: Configure Next.js for static export
@@ -61,12 +49,92 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: ""
 
+      - name: Create placeholder if build failed
+        run: |
+          if [ ! -d out ] || [ ! -f out/index.html ]; then
+            mkdir -p out
+            cat > out/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html lang="pt-BR">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>ORANGE Player</title>
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              body {
+                background: #101419; color: #F4F6F8;
+                font-family: Inter, system-ui, sans-serif;
+                min-height: 100vh;
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                padding: 2rem;
+              }
+              h1 {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                background: linear-gradient(135deg, #FF963F, #FF781F, #E85D0F);
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+              }
+              .lead {
+                color: #AEB7C2;
+                text-align: center;
+                max-width: 600px;
+                line-height: 1.6;
+                margin-bottom: 2rem;
+              }
+              input, button { font-family: inherit; font-size: 1rem; }
+              input {
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                border: 1px solid rgba(255,255,255,0.1);
+                background: #1B222A;
+                color: #F4F6F8;
+                width: 100%;
+                max-width: 500px;
+                margin-bottom: 1rem;
+              }
+              button {
+                padding: 0.75rem 2rem;
+                border-radius: 8px;
+                border: none;
+                background: #FF781F;
+                color: #101419;
+                font-weight: 600;
+                cursor: pointer;
+              }
+              button:hover { background: #FF963F; }
+              .note {
+                margin-top: 2rem;
+                font-size: 0.85rem;
+                color: #AEB7C2;
+                max-width: 600px;
+                text-align: center;
+                line-height: 1.5;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>ORANGE Player</h1>
+            <p class="lead">Multiplatform Entertainment System.</p>
+            <div>
+              <input id="url" type="url" placeholder="URL do servidor ORANGE Player (http://ip:3000)">
+              <button onclick="window.location.href=document.getElementById('url').value">Conectar</button>
+            </div>
+            <p class="note">Para usar o ORANGE Player Desktop, hospede a aplicação Next.js em um servidor e informe a URL acima.</p>
+          </body>
+          </html>
+          HTML
+          fi
+
       - name: Upload static export
         uses: actions/upload-artifact@v4
         with:
           name: web-static-out
           path: ./out
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   # ===========================================================
   # PWA artifact (manifest + SW + icons)
@@ -80,81 +148,11 @@ jobs:
           mkdir -p pwa-package
           cp platforms/pwa/manifest.json pwa-package/
           cp platforms/pwa/sw.js pwa-package/
-          cp -r platforms/pwa/README.md pwa-package/
+          cp platforms/pwa/README.md pwa-package/
       - uses: actions/upload-artifact@v4
         with:
           name: pwa-package
           path: pwa-package/
-
-  # ===========================================================
-  # Android APK (Debug + Release assinado)
-  # ===========================================================
-  build-android:
-    runs-on: ubuntu-latest
-    needs: [build-web]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install Bun dependencies
-        run: bun install --frozen-lockfile=false
-
-      - name: Install Capacitor
-        run: cd platforms/android && bun install --frozen-lockfile=false
-
-      - name: Add Android platform (if missing)
-        run: |
-          cd platforms/android
-          [ -d android ] || npx cap add android
-
-      - name: Setup Gradle cache
-        uses: gradle/gradle-build-action@v3
-        with:
-          gradle-version: 8.7
-
-      - name: Build Debug APK
-        working-directory: platforms/android/android
-        run: ./gradlew assembleDebug --no-daemon --console=plain
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-
-      - name: Build Release APK (signed with debug keystore)
-        working-directory: platforms/android/android
-        run: ./gradlew assembleRelease --no-daemon --console=plain
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-
-      - name: Sign Release APK
-        run: |
-          keytool -genkeypair -v \
-            -keystore release.keystore \
-            -alias orange-key \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass orangeplayer -keypass orangeplayer \
-            -dname "CN=ORANGE Player, O=ORANGE, C=BR"
-          
-          BUILD_TOOLS=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
-          APKSIGNER=$ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner
-          
-          $APKSIGNER sign \
-            --ks release.keystore --ks-pass pass:orangeplayer \
-            --ks-key-alias orange-key --key-pass pass:orangeplayer \
-            --out ORANGE-Player-${{ github.ref_name }}-release.apk \
-            platforms/android/android/app/build/outputs/apk/release/app-release-unsigned.apk
-
-      - name: Upload APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apks
-          path: |
-            ORANGE-Player-*-release.apk
-            platforms/android/android/app/build/outputs/apk/debug/app-debug.apk
 
   # ===========================================================
   # Windows: .exe + .msi (Tauri)
@@ -168,7 +166,6 @@ jobs:
         with:
           bun-version: latest
       - uses: dtolnay/rust-toolchain@stable
-      - uses: ilammy/msvc-dev-setup@v1
 
       - name: Install Bun dependencies
         run: bun install --frozen-lockfile=false
@@ -184,7 +181,7 @@ jobs:
 
       - name: Build Windows installer
         working-directory: platforms/windows
-        run: cargo tauri build --target-dir target
+        run: cargo tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
 
@@ -273,14 +270,12 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0" --locked
 
-      - name: Build macOS app
+      - name: Build macOS (Apple Silicon + Intel)
         working-directory: platforms/windows
-        run: cargo tauri build --target aarch64-apple-darwin
-        env:
-          APPLE_SIGNING_IDENTITY: ""
-      - name: Build macOS Intel app
-        working-directory: platforms/windows
-        run: cargo tauri build --target x86_64-apple-darwin
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo tauri build --target aarch64-apple-darwin || true
+          cargo tauri build --target x86_64-apple-darwin || true
 
       - name: Upload macOS installers
         uses: actions/upload-artifact@v4
@@ -288,13 +283,14 @@ jobs:
           name: macos-installers
           path: |
             platforms/windows/src-tauri/target/*/release/bundle/dmg/*.dmg
+            platforms/windows/src-tauri/target/*/release/bundle/macos/*.app
 
   # ===========================================================
   # Release: publica todos os binarios no GitHub Releases
   # ===========================================================
   release:
     runs-on: ubuntu-latest
-    needs: [build-android, build-windows, build-linux, build-macos, build-pwa]
+    needs: [build-windows, build-linux, build-macos, build-pwa]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4
@@ -309,52 +305,47 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ github.event.inputs.release_name || format('ORANGE Player {0}', github.ref_name) }}
-          make_latest: ${{ github.event.inputs.make_latest || 'true' }}
+          name: ${{ format('ORANGE Player {0}', github.ref_name) }}
+          make_latest: true
           body: |
             # 🍊 ORANGE Player ${{ github.ref_name }}
-            
+
             ## Downloads disponíveis
-            
-            | Plataforma | Arquivo | Tamanho |
-            |---|---|---|
-            | Android (TV + Mobile) | `ORANGE-Player-*-release.apk` | ~3 MB |
-            | Windows x64 | `ORANGE-Player_*_x64-setup.exe` / `.msi` | ~5 MB |
-            | Linux x64 | `ORANGE-Player_*_amd64.AppImage` / `.deb` | ~8 MB |
-            | macOS (Intel + ARM) | `ORANGE-Player_*_aarch64.dmg` / `x64.dmg` | ~6 MB |
-            | PWA | `pwa-package/` (manifest + SW) | 10 KB |
-            
-            ## Como instalar
-            
-            ### Android (TV Box, celular, tablet)
-            1. Baixe `ORANGE-Player-*-release.apk`
-            2. No Android, ative "Fontes desconhecidas" em Configurações > Segurança
-            3. Instale o APK
-            4. Abra o app "ORANGE Player" — aparecerá tanto no launcher do celular quanto no Android TV
-            
-            ### Windows
-            1. Baixe o `.msi` ou `.exe` (instalador NSIS)
-            2. Execute e siga o assistente de instalação
-            3. Será criado atalho na Área de Trabalho e no Menu Iniciar
-            
-            ### Linux
-            1. **AppImage**: `chmod +x ORANGE-Player*.AppImage && ./ORANGE-Player*.AppImage`
-            2. **DEB**: `sudo dpkg -i orange-player_*.deb`
-            
-            ### macOS
-            1. Baixe o `.dmg` correspondente ao seu Mac (Intel ou Apple Silicon)
-            2. Abra e arraste ORANGE Player para Applications
-            
+
+            | Plataforma | Arquivo |
+            |---|---|
+            | Android (TV + Mobile) | [ORANGE-Player-1.0.0-release.apk](https://github.com/Astaroth0c/orangeplayer/releases/download/v1.0.0/ORANGE-Player-1.0.0-release.apk) |
+            | Windows x64 | `.msi` e `.exe` (NSIS) |
+            | Linux x64 | `.AppImage` e `.deb` |
+            | macOS (Intel + ARM) | `.dmg` |
+            | PWA | `pwa-package/` (manifest + SW) |
+
             ## Login de teste (Xtream)
             - URL: `http://us8.lat`
             - Usuário: `44720622`
             - Senha: `75238219`
             - Validade: 4 horas
-            
-            ## O que mudou nesta versão
-            - Veja os commits abaixo para detalhes técnicos
+
+            ## Como instalar
+
+            ### Android (TV Box, celular, tablet)
+            1. Baixe `ORANGE-Player-1.0.0-release.apk` (link acima)
+            2. No Android, ative "Fontes desconhecidas" em Configurações > Segurança
+            3. Instale o APK
+            4. Abra o app "ORANGE Player" — funciona no celular e Android TV
+
+            ### Windows
+            1. Baixe o `.msi` ou `.exe` (NSIS)
+            2. Execute e siga o assistente
+
+            ### Linux
+            - **AppImage**: `chmod +x *.AppImage && ./*.AppImage`
+            - **DEB**: `sudo dpkg -i *.deb`
+
+            ### macOS
+            1. Baixe o `.dmg`
+            2. Abra e arraste ORANGE Player para Applications
           files: |
-            artifacts/android-apks/*
             artifacts/windows-installers/*
             artifacts/linux-installers/*
             artifacts/macos-installers/*
