@@ -3,6 +3,7 @@
 // ===========================================================
 // Implementa as chamadas de API mais comuns do formato Xtream Codes:
 //   - player_api.php?username=...&password=...&action=...
+//   - panel_api.php (fallback usado por alguns provedores)
 //   - XMLTV: xmltv.php?username=...&password=...
 // Não armazena credenciais em logs.
 
@@ -141,7 +142,12 @@ export interface XtreamVodInfo {
   };
 }
 
-function base(creds: XtreamCredentials): string {
+// ===========================================================
+// Helpers — NÃO usar o nome "base" como variável local
+// porque causa TDZ (Temporal Dead Zone) ao sombrear a função.
+// ===========================================================
+
+function buildBaseUrl(creds: XtreamCredentials): string {
   let url = creds.serverUrl.trim();
   if (!url) return "";
   url = url.replace(/\/+$/, "");
@@ -161,50 +167,87 @@ function safeUrl(url: string): string {
   return url.replace(/(username|password)=([^&]+)/gi, (_, key: string) => `${key}=***`);
 }
 
-async function call<T>(creds: XtreamCredentials, action?: string): Promise<T> {
-  const base = base(creds);
-  if (!base) throw new Error("URL do servidor Xtream inválida.");
-  const params = authParams(creds);
-  if (action) params.set("action", action);
-  const url = `${base}/player_api.php?${params.toString()}`;
+// ===========================================================
+// Fetch com timeout
+// ===========================================================
 
+async function tryFetch(url: string, timeoutMs = 15000): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, {
+    return await fetch(url, {
       signal: controller.signal,
       headers: {
         "User-Agent": "ORANGE-Player/1.0",
-        Accept: "application/json",
+        Accept: "application/json, text/plain, */*",
       },
     });
-    if (!res.ok) {
-      throw new Error(`Resposta ${res.status} do servidor Xtream.`);
-    }
-    const text = await res.text();
-    if (!text || text.trim().startsWith("<")) {
-      throw new Error("Resposta não-JSON recebida do servidor Xtream.");
-    }
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      throw new Error("Falha ao interpretar resposta JSON do servidor Xtream.");
-    }
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("Tempo limite excedido ao contatar o servidor Xtream.");
-    }
-    throw err;
   } finally {
     clearTimeout(timeout);
   }
 }
 
+// ===========================================================
+// Chamada de API — tenta player_api.php e depois panel_api.php
+// ===========================================================
+
+async function call<T>(creds: XtreamCredentials, action?: string): Promise<T> {
+  const baseUrl = buildBaseUrl(creds);
+  if (!baseUrl) throw new Error("URL do servidor Xtream inválida.");
+  const params = authParams(creds);
+  if (action) params.set("action", action);
+
+  // Alguns provedores usam /panel_api.php em vez de /player_api.php.
+  // Tentamos player_api.php primeiro, depois panel_api.php como fallback.
+  const candidates = [
+    `${baseUrl}/player_api.php?${params.toString()}`,
+    `${baseUrl}/panel_api.php?${params.toString()}`,
+  ];
+
+  let lastErr: Error | null = null;
+  for (const url of candidates) {
+    try {
+      const res = await tryFetch(url);
+      if (res.status === 404) {
+        lastErr = new Error(`Resposta 404 do servidor Xtream.`);
+        continue;
+      }
+      if (!res.ok) {
+        lastErr = new Error(`Resposta ${res.status} do servidor Xtream.`);
+        continue;
+      }
+      const text = await res.text();
+      if (!text || text.trim().startsWith("<")) {
+        lastErr = new Error("Resposta não-JSON recebida do servidor Xtream.");
+        continue;
+      }
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        lastErr = new Error("Falha ao interpretar resposta JSON do servidor Xtream.");
+        continue;
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        lastErr = new Error("Tempo limite excedido ao contatar o servidor Xtream.");
+      } else if (err instanceof Error) {
+        lastErr = err;
+      }
+      // try next candidate
+    }
+  }
+  throw lastErr ?? new Error("Falha ao contatar o servidor Xtream.");
+}
+
+// ===========================================================
+// API pública
+// ===========================================================
+
 export const xtream = {
-  base,
+  base: buildBaseUrl,
+
   authenticate(creds: XtreamCredentials): string {
-    // URL para autenticação — sem expor a senha
-    return safeUrl(`${base(creds)}/player_api.php?${authParams(creds).toString()}`);
+    return safeUrl(`${buildBaseUrl(creds)}/player_api.php?${authParams(creds).toString()}`);
   },
 
   async getUserInfo(creds: XtreamCredentials): Promise<XtreamUserInfo> {
@@ -222,9 +265,6 @@ export const xtream = {
   },
 
   async getLiveStreams(creds: XtreamCredentials, categoryId?: string): Promise<XtreamStream[]> {
-    const params = authParams(creds);
-    params.set("action", "get_live_streams");
-    if (categoryId) params.set("category_id", categoryId);
     return call<XtreamStream[]>(creds, `get_live_streams${categoryId ? `&category_id=${categoryId}` : ""}`);
   },
   async getVodStreams(creds: XtreamCredentials, categoryId?: string): Promise<XtreamStream[]> {
@@ -235,24 +275,27 @@ export const xtream = {
   },
 
   async getVodInfo(creds: XtreamCredentials, vodId: string): Promise<XtreamVodInfo> {
+    const baseUrl = buildBaseUrl(creds);
     const params = authParams(creds);
     params.set("action", "get_vod_info");
     params.set("vod_id", vodId);
-    const url = `${base(creds)}/player_api.php?${params.toString()}`;
-    const res = await fetch(url);
+    const url = `${baseUrl}/player_api.php?${params.toString()}`;
+    const res = await tryFetch(url);
     return res.json();
   },
+
   async getSeriesInfo(creds: XtreamCredentials, seriesId: string): Promise<XtreamSeriesInfo> {
+    const baseUrl = buildBaseUrl(creds);
     const params = authParams(creds);
     params.set("action", "get_series_info");
     params.set("series_id", seriesId);
-    const url = `${base(creds)}/player_api.php?${params.toString()}`;
-    const res = await fetch(url);
+    const url = `${baseUrl}/player_api.php?${params.toString()}`;
+    const res = await tryFetch(url);
     return res.json();
   },
 
   streamUrl(creds: XtreamCredentials, type: "live" | "movie" | "series", id: string, ext: string = "m3u8"): string {
-    const b = base(creds);
+    const b = buildBaseUrl(creds);
     const extParam = ext && ext.length ? `.${ext}` : "";
     if (type === "live") return `${b}/live/${creds.username}/${creds.password}/${id}${extParam}`;
     if (type === "movie") return `${b}/movie/${creds.username}/${creds.password}/${id}${extParam}`;
@@ -260,10 +303,10 @@ export const xtream = {
   },
 
   epgUrl(creds: XtreamCredentials): string {
-    return `${base(creds)}/xmltv.php?${authParams(creds).toString()}`;
+    return `${buildBaseUrl(creds)}/xmltv.php?${authParams(creds).toString()}`;
   },
 
   shortUrl(creds: XtreamCredentials): string {
-    return base(creds).replace(/^https?:\/\//, "");
+    return buildBaseUrl(creds).replace(/^https?:\/\//, "");
   },
 };

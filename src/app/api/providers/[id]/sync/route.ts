@@ -193,6 +193,9 @@ async function syncXtream(provider: any): Promise<number> {
     password: provider.password,
   };
 
+  // Helper para garantir que a resposta seja sempre um array
+  const asArray = <T>(v: any): T[] => (Array.isArray(v) ? v : []);
+
   const info = await xtream.getUserInfo(creds);
   if (info.user_info && info.user_info.auth === 0) {
     throw new Error("Credenciais Xtream inválidas.");
@@ -201,7 +204,7 @@ async function syncXtream(provider: any): Promise<number> {
   let count = 0;
 
   try {
-    const liveCats = await xtream.getLiveCategories(creds);
+    const liveCats = asArray(await xtream.getLiveCategories(creds));
     for (const cat of liveCats.slice(0, 50)) {
       let dbCat = await db.category.findFirst({
         where: { providerId: provider.id, categoryId: cat.category_id, type: "live" },
@@ -211,7 +214,7 @@ async function syncXtream(provider: any): Promise<number> {
           data: { providerId: provider.id, categoryId: cat.category_id, name: cat.category_name, type: "live" },
         });
       }
-      const streams = await xtream.getLiveStreams(creds, cat.category_id);
+      const streams = asArray(await xtream.getLiveStreams(creds, cat.category_id));
       for (const s of streams.slice(0, 200)) {
         if (!s.stream_id) continue;
         const exists = await db.channel.findFirst({
@@ -239,7 +242,7 @@ async function syncXtream(provider: any): Promise<number> {
   }
 
   try {
-    const vodCats = await xtream.getVodCategories(creds);
+    const vodCats = asArray(await xtream.getVodCategories(creds));
     for (const cat of vodCats.slice(0, 50)) {
       let dbCat = await db.category.findFirst({
         where: { providerId: provider.id, categoryId: cat.category_id, type: "movie" },
@@ -249,7 +252,7 @@ async function syncXtream(provider: any): Promise<number> {
           data: { providerId: provider.id, categoryId: cat.category_id, name: cat.category_name, type: "movie" },
         });
       }
-      const streams = await xtream.getVodStreams(creds, cat.category_id);
+      const streams = asArray(await xtream.getVodStreams(creds, cat.category_id));
       for (const s of streams.slice(0, 200)) {
         if (!s.stream_id) continue;
         const exists = await db.movie.findFirst({
@@ -278,7 +281,7 @@ async function syncXtream(provider: any): Promise<number> {
   }
 
   try {
-    const seriesCats = await xtream.getSeriesCategories(creds);
+    const seriesCats = asArray(await xtream.getSeriesCategories(creds));
     for (const cat of seriesCats.slice(0, 30)) {
       let dbCat = await db.category.findFirst({
         where: { providerId: provider.id, categoryId: cat.category_id, type: "series" },
@@ -288,7 +291,7 @@ async function syncXtream(provider: any): Promise<number> {
           data: { providerId: provider.id, categoryId: cat.category_id, name: cat.category_name, type: "series" },
         });
       }
-      const series = await xtream.getSeries(creds, cat.category_id);
+      const series = asArray(await xtream.getSeries(creds, cat.category_id));
       for (const s of series.slice(0, 100)) {
         if (!s.series_id) continue;
         const exists = await db.series.findFirst({
